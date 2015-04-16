@@ -41,8 +41,8 @@ Gem::Specification.new do |spec|
   spec.name          = "${project.name}"
   spec.version       = "${project.version}"
   spec.authors       = ["Shun Takebayashi"]
-  spec.summary       = %[Hbase input plugin for Embulk]
-  spec.description   = %[Loads records from Hbase.]
+  spec.summary       = %[HBase input plugin for Embulk]
+  spec.description   = %[Loads records from HBase.]
   spec.email         = ["shun@takebayashi.asia"]
   spec.licenses      = ["MIT"]
   spec.homepage      = "https://github.com/takebayashi/embulk-input-hbase"

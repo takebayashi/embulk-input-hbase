@@ -1,4 +1,4 @@
-# Hbase input plugin for Embulk
+# HBase input plugin for Embulk
 
 TODO: Write short description here and build.gradle file.
 
