@@ -1,24 +1,18 @@
 package org.embulk.input;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.stream.Collectors;
-
 import com.google.common.base.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.embulk.config.CommitReport;
-import org.embulk.config.Config;
-import org.embulk.config.ConfigDiff;
-import org.embulk.config.ConfigSource;
-import org.embulk.config.Task;
-import org.embulk.config.TaskSource;
-import org.embulk.exec.PooledBufferAllocator;
+import org.embulk.config.*;
 import org.embulk.spi.*;
 import org.embulk.spi.type.Type;
 import org.embulk.spi.type.Types;
+
+import java.io.IOException;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class HBaseInputPlugin
         implements InputPlugin
@@ -33,13 +27,18 @@ public class HBaseInputPlugin
         public String getTableName();
 
         @Config("start_row")
+        @ConfigDefault("null")
         public Optional<String> getStartRow();
 
         @Config("stop_row")
+        @ConfigDefault("null")
         public Optional<String> getStopRow();
 
         @Config("columns")
         public SchemaConfig getColumns();
+
+        @ConfigInject
+        public BufferAllocator getBufferAllocator();
     }
 
     byte[] getStartRowKey(PluginTask task) {
@@ -103,7 +102,7 @@ public class HBaseInputPlugin
     {
         PluginTask task = taskSource.loadTask(PluginTask.class);
         try (HConnection connection = connect(task);
-             PageBuilder pageBuilder = new PageBuilder(new PooledBufferAllocator(), schema, output);
+             PageBuilder pageBuilder = new PageBuilder(task.getBufferAllocator(), schema, output);
              HTableInterface table = connection.getTable(task.getTableName())) {
             Scan scan = new Scan();
 
