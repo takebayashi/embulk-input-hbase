@@ -4,11 +4,9 @@ import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.google.common.base.Optional;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HRegionInfo;
-import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.*;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.embulk.config.CommitReport;
@@ -35,13 +33,27 @@ public class HBaseInputPlugin
         public String getTableName();
 
         @Config("start_row")
-        public String getStartRow();
+        public Optional<String> getStartRow();
 
         @Config("stop_row")
-        public String getStopRow();
+        public Optional<String> getStopRow();
 
         @Config("columns")
         public SchemaConfig getColumns();
+    }
+
+    byte[] getStartRowKey(PluginTask task) {
+        if (task.getStartRow().isPresent()) {
+            return Bytes.toBytes(task.getStartRow().get());
+        }
+        return HConstants.EMPTY_START_ROW;
+    }
+
+    byte[] getStopRowKey(PluginTask task) {
+        if (task.getStopRow().isPresent()) {
+            return Bytes.toBytes(task.getStopRow().get());
+        }
+        return HConstants.EMPTY_END_ROW;
     }
 
     HConnection connect(PluginTask task) throws IOException {
@@ -60,7 +72,7 @@ public class HBaseInputPlugin
         Schema schema = task.getColumns().toSchema();
         try (HConnection connection = connect(task)) {
             HTable table = (HTable) connection.getTable(task.getTableName());
-            List<HRegionLocation> locations = table.getRegionsInRange(Bytes.toBytes(task.getStartRow()), Bytes.toBytes(task.getStopRow()));
+            List<HRegionLocation> locations = table.getRegionsInRange(getStartRowKey(task), getStopRowKey(task));
             regionIds = locations.stream().map(l -> l.getRegionInfo().getRegionName()).collect(Collectors.toList());
             return resume(task.dump(), schema, regionIds.size(), control);
         } catch (IOException e) {
@@ -97,11 +109,11 @@ public class HBaseInputPlugin
 
             // row range
             HRegionInfo regionInfo = connection.locateRegion(regionIds.get(taskIndex)).getRegionInfo();
-            byte[] startRow = Bytes.toBytes(task.getStartRow());
+            byte[] startRow = getStartRowKey(task);
             if (Bytes.compareTo(startRow, regionInfo.getStartKey()) < 0) {
                 startRow = regionInfo.getStartKey();
             }
-            byte[] stopRow = Bytes.toBytes(task.getStopRow());
+            byte[] stopRow = getStopRowKey(task);
             if (Bytes.compareTo(regionInfo.getEndKey(), stopRow) < 0) {
                 stopRow = regionInfo.getEndKey();
             }
